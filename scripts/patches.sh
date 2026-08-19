@@ -380,10 +380,22 @@ if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
 			# Driven by the *resolved* hook mode, not the raw setting, so that
 			# KSU_HOOK_MODE=auto on a pre-GKI kernel still gets its hooks
 			# patched in rather than only getting the Kconfig symbol set.
-			if [ "${KSU_VARIANT:-none}" != "none" ] &&
-			   [ "${KSU_HOOK_MODE_RESOLVED:-}" = "manual" ]; then
-				hooks_patch_apply
-			fi
+			if [ "${KSU_VARIANT:-none}" != "none" ]; then
+    			hook_mode="${KSU_HOOK_MODE_RESOLVED:-${KSU_HOOK_MODE:-auto}}"
+
+    		if [ "$hook_mode" = "auto" ]; then
+        		kver=$(kernel_version "$KERNEL_DIR") || die "cannot read kernel version"
+        		if ver_ge "$kver" "5.10"; then
+            	hook_mode="kprobes"
+        		else
+            	hook_mode="manual"
+        		fi
+    		fi
+
+   			if [ "$hook_mode" = "manual" ]; then
+        		hooks_patch_apply
+    		fi
+fi
 
 			if is_true "${ENABLE_SUSFS:-false}";      then susfs_apply;      fi
 			if is_true "${ENABLE_HIDE_STUFF:-false}"; then hide_stuff_apply; fi
