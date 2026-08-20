@@ -40,6 +40,7 @@ clang_known_good() {
 		main-kernel-2026/r584948c | \
 		main-kernel-2025/r547379 | \
 		main-kernel-2025/r536225 | \
+		mirror-goog-llvm-r563880-release/r563880 | \
 		main-kernel-build-2024/r510928 | \
 		main-kernel-build-2023/r498229b | \
 		master-kernel-build-2022/r450784e | \
