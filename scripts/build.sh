@@ -464,6 +464,28 @@ grep -E \
     2>/dev/null || true
 
 echo "===== End KernelSU symbol inspection ====="
+echo "===== KernelSU Kbuild verification ====="
+
+KSU_SRC="${KERNEL_DIR}/drivers/kernelsu"
+
+echo "--- KernelSU Makefile/Kbuild files ---"
+find "$KSU_SRC" -maxdepth 3 -type f \
+    \( -name 'Makefile' -o -name 'Kbuild' \) \
+    -print
+
+echo "--- ksud_integration references in build rules ---"
+grep -Rns \
+    -E 'ksud_integration|runtime/.*\.o|feature/.*\.o' \
+    "$KSU_SRC" \
+    2>/dev/null || true
+
+echo "--- KernelSU object rules ---"
+grep -Rns \
+    -E 'obj-\$\(CONFIG_KSU\)|kernelsu-y|kernelsu-objs|ksud_integration' \
+    "$KSU_SRC" \
+    2>/dev/null || true
+
+echo "===== End KernelSU Kbuild verification ====="
 
 	# ---------------------------------------------------------
 	# Step 3: Build kernel using the final .config
