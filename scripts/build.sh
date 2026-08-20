@@ -444,7 +444,10 @@ build_kernel() {
 	# ---------------------------------------------------------
 	# Step 2: Merge Motorola + Dubai LineageOS fragments
 	# ---------------------------------------------------------
-
+	info "Copying config fragments from repository to kernel tree"
+	# ${WORKSPACE}/.. is where your GitHub repository files are located
+	cp "${WORKSPACE}/../lineage_moto-lahaina.config" "${KERNEL_DIR}/arch/${ARCH}/configs/vendor/"
+	cp "${WORKSPACE}/../lineage_dubai.config" "${KERNEL_DIR}/arch/${ARCH}/configs/vendor/"
 	merge_lineage_fragments
 
 	# ---------------------------------------------------------
