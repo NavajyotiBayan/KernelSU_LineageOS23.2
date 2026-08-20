@@ -275,19 +275,6 @@ arch/${ARCH}/configs/vendor/lineage_dubai.config"
   kconf_set_many "${OUT}/.config" \
     CONFIG_KSU=y
 
-  # KernelSU Next legacy manual hooks require this symbol
-  # only when the Kconfig symbol exists in this kernel tree.
-  if grep -q '^[[:space:]]*config KSU_MANUAL_HOOK' \
-      "${KERNEL_DIR}/KernelSU/kernel/Kconfig" \
-      "${KERNEL_DIR}/drivers/kernelsu/Kconfig" \
-      "${KERNEL_DIR}/fs/Kconfig" \
-      2>/dev/null; then
-
-    kconf_set_many "${OUT}/.config" \
-      CONFIG_KSU_MANUAL_HOOK=y
-
-  fi
-
   # Re-resolve dependencies after forcing KernelSU.
   (
     cd "$KERNEL_DIR"
@@ -308,10 +295,6 @@ arch/${ARCH}/configs/vendor/lineage_dubai.config"
   fi
 
   ok "CONFIG_KSU=y confirmed in final .config"
-
-  if grep -q '^CONFIG_KSU_MANUAL_HOOK=y$' "${OUT}/.config"; then
-    ok "CONFIG_KSU_MANUAL_HOOK=y confirmed"
-  fi
 
   ok "LineageOS Dubai configuration merged"
 
