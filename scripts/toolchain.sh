@@ -73,23 +73,44 @@ setup_clang() {
 				extract_archive "${WORKSPACE}/clang.zip" "$CLANG_DIR" ;;
 		esac
 	else
-		group "Downloading AOSP Clang"
+				group "Downloading AOSP Clang"
+
 		local branch=${CLANG_BRANCH:-main-kernel-2025}
 		local version=${CLANG_VERSION:-r547379}
 
-		if ! clang_known_good "$branch" "$version"; then
-			warn "clang ${version} on branch ${branch} is not in the verified-good table."
-			warn "AOSP lists many version directories per branch but only populates a few;"
-			warn "an unpopulated one downloads as a valid but EMPTY archive."
-			warn "Verified pairs: main-kernel/r596125, main-kernel-2026/r584948c,"
-			warn "main-kernel-2025/r547379, main-kernel-build-2024/r510928,"
-			warn "master-kernel-build-2022/r450784e"
-		fi
+		if [ "$branch" = "mirror-goog-llvm-r563880-release" ] &&
+		   [ "$version" = "r563880" ]; then
 
-		fetch "${AOSP_CLANG_BASE}/+archive/refs/heads/${branch}/clang-${version}.tar.gz" \
-			"${WORKSPACE}/clang.tar.gz"
-		extract_archive "${WORKSPACE}/clang.tar.gz" "$CLANG_DIR"
-	fi
+			info "Using Google r563880 release mirror"
+
+			rm -rf "$CLANG_DIR"
+			mkdir -p "$CLANG_DIR"
+
+			retry 3 git clone -q --depth=1 \
+				-b "$branch" \
+				"$AOSP_CLANG_BASE" \
+				"$CLANG_DIR"
+
+			# The release mirror stores the compiler in
+			# clang-r563880/.
+			if [ -d "${CLANG_DIR}/clang-r563880" ]; then
+				mv "${CLANG_DIR}/clang-r563880/"* "$CLANG_DIR/"
+				mv "${CLANG_DIR}/clang-r563880/".[!.]* "$CLANG_DIR/" 2>/dev/null || true
+				rm -rf "${CLANG_DIR}/clang-r563880"
+			fi
+
+		else
+
+			if ! clang_known_good "$branch" "$version"; then
+				warn "clang ${version} on branch ${branch} is not in the verified-good table."
+			fi
+
+			fetch "${AOSP_CLANG_BASE}/+archive/refs/heads/${branch}/clang-${version}.tar.gz" \
+				"${WORKSPACE}/clang.tar.gz"
+
+			extract_archive "${WORKSPACE}/clang.tar.gz" "$CLANG_DIR"
+
+		fi
 
 	# The check that turns the empty-archive trap into an actionable error.
 	[ -x "${CLANG_DIR}/bin/clang" ] \
