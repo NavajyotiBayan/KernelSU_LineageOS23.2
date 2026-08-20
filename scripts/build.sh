@@ -481,6 +481,35 @@ echo "===== End KernelSU symbol inspection ====="
 	endgroup
 }
 
+echo "===== KernelSU Kbuild verification ====="
+
+KSU_SRC="${KERNEL_DIR}/drivers/kernelsu"
+
+echo "--- KernelSU Makefiles/Kbuild files ---"
+find "$KSU_SRC" -maxdepth 3 -type f \
+    \( -name 'Makefile' -o -name 'Kbuild' \) \
+    -print
+
+echo "--- ksud_integration build references ---"
+grep -Rns \
+    -E 'ksud_integration|runtime/.*\.o|feature/.*\.o' \
+    "$KSU_SRC" \
+    2>/dev/null || true
+
+echo "--- CONFIG_KSU object rules ---"
+grep -Rns \
+    -E 'CONFIG_KSU|obj-\$\(CONFIG_KSU\)|ksud_integration' \
+    "$KSU_SRC" \
+    2>/dev/null || true
+
+echo "--- Compiled KernelSU objects ---"
+find "${OUT}" \
+    \( -name 'ksud_integration.o' -o -name 'selinux_hide.o' \) \
+    -print \
+    2>/dev/null || true
+
+echo "===== End KernelSU Kbuild verification ====="
+
 # --------------------------------------------------------------- verify ---
 
 check_output() {
