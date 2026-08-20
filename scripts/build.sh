@@ -454,7 +454,7 @@ grep -Rns \
 
 echo "--- KSU/kprobe configuration ---"
 grep -E \
-    '^(CONFIG_KSU|CONFIG_KSU_KPROBES_HOOK|CONFIG_KSU_MANUAL_HOOK|CONFIG_KPROBES|CONFIG_HAVE_KPROBES|CONFIG_KPROBE_EVENTS)=' \
+    '^(CONFIG_KSU|CONFIG_KSU_KPROBES_HOOK|CONFIG_KPROBES|CONFIG_HAVE_KPROBES|CONFIG_KPROBE_EVENTS)=' \
     "${OUT}/.config" || true
 
 echo "=== End KernelSU input-hook diagnostic ==="
