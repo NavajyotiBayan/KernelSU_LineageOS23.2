@@ -303,38 +303,114 @@ hide_stuff_apply() {
 # Manual/syscall hook patches for pre-GKI trees, used when the fork expects the
 # hooks to already exist in the kernel source rather than hooking via kprobes.
 hooks_patch_apply() {
-	local variant=${KSU_VARIANT:-none} kver
+	local variant=${KSU_VARIANT:-none}
+	local kver
+
 	kver=$(kernel_version "$KERNEL_DIR") || return 0
 
 	group "Applying manual syscall hooks (kernel ${kver})"
 
-	# ReSukiSU publishes scope-minimised hook patches keyed by kernel version.
-	if [ "$variant" = "resukisu" ]; then
-		local dir="${WORKSPACE}/ReSukiSU_Patches"
-		[ -d "$dir" ] || retry 3 git clone -q --depth=1 \
-			https://github.com/ReSukiSU/ReSukiSU_Patches.git "$dir" || true
-		local p="${dir}/scope-minimized/kernel-${kver}.patch"
-		if [ -f "$p" ]; then
-			( cd "$KERNEL_DIR" && apply_patch "$p" 1 ) && { endgroup; return 0; }
-		else
-			info "ReSukiSU ships no scope-minimized patch for kernel ${kver}"
+	# KernelSU-Next requires manual syscall hooks on pre-5.10 kernels.
+	# Do NOT use the old KernelSU 0.9.x compatibility script for KSUN.
+	if [ "$variant" = "kernelsu-next" ]; then
+		info "KernelSU-Next selected: using KernelSU-Next manual-hook patch set"
+
+		local patch_dir="${WORKSPACE}/KernelSU-Next"
+		local patch=""
+
+		# Prefer a KernelSU-Next-provided/manual-hook patch if present.
+		if [ -d "$patch_dir" ]; then
+			patch=$(find "$patch_dir" -type f \
+				\( -iname '*manual*hook*.patch' \
+				   -o -iname '*syscall*hook*.patch' \
+				   -o -iname '*scope*hook*.patch' \) \
+				| sort | head -n1 || true)
 		fi
+
+		if [ -n "$patch" ] && [ -f "$patch" ]; then
+			info "Applying KernelSU-Next manual-hook patch:"
+			info "  ${patch}"
+
+			(
+				cd "$KERNEL_DIR"
+				apply_patch "$patch" 1
+			) || die "KernelSU-Next manual-hook patch failed"
+
+			ok "KernelSU-Next manual hooks applied"
+			endgroup
+			return 0
+		fi
+
+		# IMPORTANT:
+		# Do not silently fall back to the old KernelSU 0.9.x hook script.
+		#
+		# Building KSUN with mismatched legacy hooks can produce a kernel that
+		# compiles successfully but hangs during early Android boot.
+		die "KernelSU-Next manual-hook patch was not found.
+	Do not use patches/legacy_ksu_hooks.sh for KernelSU-Next.
+	Provide a KernelSU-Next-compatible manual-hook patch for kernel ${kver}."
 	fi
 
-	# SukiSU's patch repo carries per-version hook patches too.
+	# ---------------------------------------------------------------
+	# Older KernelSU variants
+	# ---------------------------------------------------------------
+
+	if [ "$variant" = "resukisu" ]; then
+		local dir="${WORKSPACE}/ReSukiSU_Patches"
+
+		[ -d "$dir" ] || retry 3 git clone -q --depth=1 \
+			https://github.com/ReSukiSU/ReSukiSU_Patches.git "$dir" || true
+
+		local p="${dir}/scope-minimized/kernel-${kver}.patch"
+
+		if [ -f "$p" ]; then
+			(
+				cd "$KERNEL_DIR"
+				apply_patch "$p" 1
+			) || die "ReSukiSU hook patch failed"
+
+			ok "ReSukiSU manual hooks applied"
+			endgroup
+			return 0
+		fi
+
+		info "ReSukiSU ships no scope-minimized patch for kernel ${kver}"
+	fi
+
 	if [ "$variant" = "sukisu-ultra" ]; then
 		local dir p
+
 		dir=$(sukisu_patch_dir)
-		for p in "${dir}/${kver}/"*hook*.patch "${dir}/hooks/syscall_hooks.patch"; do
+
+		for p in \
+			"${dir}/${kver}/"*hook*.patch \
+			"${dir}/hooks/syscall_hooks.patch"
+		do
 			[ -f "$p" ] || continue
-			if ( cd "$KERNEL_DIR" && apply_patch "$p" 1 ); then endgroup; return 0; fi
+
+			if (
+				cd "$KERNEL_DIR"
+				apply_patch "$p" 1
+			); then
+				ok "SukiSU-Ultra manual hooks applied"
+				endgroup
+				return 0
+			fi
 		done
 	fi
 
-	# Fall back to the in-repo sed script, which is what this action shipped
-	# historically and still works for the 4.9-5.4 KernelSU 0.9.x hook API.
-	info "falling back to the bundled legacy hook script"
-	( cd "$KERNEL_DIR" && bash "${REPO_ROOT}/patches/legacy_ksu_hooks.sh" )
+	# ---------------------------------------------------------------
+	# Legacy KernelSU 0.9.x only
+	# ---------------------------------------------------------------
+
+	info "falling back to bundled legacy KernelSU hook script"
+
+	(
+		cd "$KERNEL_DIR"
+		bash "${REPO_ROOT}/patches/legacy_ksu_hooks.sh"
+	)
+
+	ok "legacy KernelSU hooks applied"
 	endgroup
 }
 
