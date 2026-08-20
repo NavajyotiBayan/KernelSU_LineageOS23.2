@@ -246,22 +246,22 @@ arch/${ARCH}/configs/vendor/lineage_dubai.config"
 	# This preserves the KernelSU modifications already made to
 	# the base defconfig.
 	(
-		cd "$KERNEL_DIR"
+        cd "$KERNEL_DIR"
 
-		"$merge_script" \
-			-m \
-			-O "$OUT" \
-			"${OUT}/.config" \
-			"${fragments[@]}"
-	)
+        "$merge_script" \
+            -m \
+            -O "$OUT" \
+            "${OUT}/.config" \
+            "${fragments[@]}"
+    )
 
 	  # Resolve dependencies and generate the final configuration.
   (
     cd "$KERNEL_DIR"
 
     make \
-      O=out \
-      ARCH="${ARCH}" \
+      CC="clang" \
+      $(make_args) \
       olddefconfig
   )
 
