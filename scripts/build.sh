@@ -435,29 +435,35 @@ build_kernel() {
 	cp "${WORKSPACE}/../lineage_moto-lahaina.config" "${KERNEL_DIR}/arch/${ARCH}/configs/vendor/"
 	cp "${WORKSPACE}/../lineage_dubai.config" "${KERNEL_DIR}/arch/${ARCH}/configs/vendor/"
 	merge_lineage_fragments
-	echo "=== KernelSU input-hook diagnostic ==="
+	echo "===== KernelSU symbol inspection ====="
 
 echo "--- KSU hook mode ---"
 echo "KSU_VARIANT=${KSU_VARIANT:-}"
+echo "KSU_REF=${KSU_REF:-}"
 echo "KSU_HOOK_MODE=${KSU_HOOK_MODE:-}"
 echo "KSU_HOOK_MODE_RESOLVED=${KSU_HOOK_MODE_RESOLVED:-}"
-echo "KSU_DIR=${KSU_DIR:-KernelSU}"
 
 echo "--- ksu_input_hook references ---"
 grep -Rns \
-    -e 'ksu_input_hook' \
-    -e 'ksu_handle_input_handle_event' \
-    "${KERNEL_DIR}/drivers/input" \
+    "ksu_input_hook" \
+    "${KERNEL_DIR}/KernelSU" \
     "${KERNEL_DIR}/drivers/kernelsu" \
-    "${KERNEL_DIR}/${KSU_DIR:-KernelSU}" \
     2>/dev/null || true
 
-echo "--- KSU/kprobe configuration ---"
-grep -E \
-    '^(CONFIG_KSU|CONFIG_KSU_KPROBES_HOOK|CONFIG_KPROBES|CONFIG_HAVE_KPROBES|CONFIG_KPROBE_EVENTS)=' \
-    "${OUT}/.config" || true
+echo "--- ksu_hide_init_thread references ---"
+grep -Rns \
+    "ksu_hide_init_thread" \
+    "${KERNEL_DIR}/KernelSU" \
+    "${KERNEL_DIR}/drivers/kernelsu" \
+    2>/dev/null || true
 
-echo "=== End KernelSU input-hook diagnostic ==="
+echo "--- KernelSU/Kprobe configuration ---"
+grep -E \
+    '^(CONFIG_KSU|CONFIG_KSU_KPROBES_HOOK|CONFIG_KSU_MANUAL_HOOK|CONFIG_KPROBES|CONFIG_HAVE_KPROBES|CONFIG_KPROBE_EVENTS)=' \
+    "${OUT}/.config" \
+    2>/dev/null || true
+
+echo "===== End KernelSU symbol inspection ====="
 
 	# ---------------------------------------------------------
 	# Step 3: Build kernel using the final .config
