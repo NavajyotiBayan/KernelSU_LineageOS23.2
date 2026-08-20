@@ -74,18 +74,19 @@ for i in "${patch_files[@]}"; do
     esac
 
     # KernelSU Next manual hook: reboot syscall
-    if [ -f kernel/reboot.c ]; then
-        if grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
-            echo "kernel/reboot.c already contains KernelSU reboot hook"
-        else
-            echo "Patching kernel/reboot.c for KernelSU Next manual hooks"
+if [ -f kernel/reboot.c ]; then
+    if grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
+        echo "kernel/reboot.c already contains KernelSU reboot hook"
+    else
+        echo "Patching kernel/reboot.c for KernelSU Next manual hooks"
 
-            python3 - <<'PY'
+        python3 - <<'PY'
 from pathlib import Path
 
 path = Path("kernel/reboot.c")
 text = path.read_text()
 
+# Add the KernelSU-Next function declaration at file scope.
 extern_block = """#ifdef CONFIG_KSU_MANUAL_HOOK
 extern int ksu_handle_sys_reboot(int magic1, int magic2,
                                  unsigned int cmd, void __user **arg);
@@ -93,10 +94,14 @@ extern int ksu_handle_sys_reboot(int magic1, int magic2,
 
 """
 
-needle = "SYSCALL_DEFINE4(reboot"
+needle = """SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
+		void __user *, arg)
+"""
 
 if needle not in text:
-    raise SystemExit("ERROR: reboot syscall declaration not found")
+    raise SystemExit(
+        "ERROR: reboot syscall declaration not found"
+    )
 
 if "ksu_handle_sys_reboot" not in text:
     text = text.replace(
@@ -105,38 +110,43 @@ if "ksu_handle_sys_reboot" not in text:
         1
     )
 
-signature = """void __user *, arg)
-{
+# The kernel is compiled as gnu89.
+# Therefore the hook MUST come AFTER all local variable declarations.
+declaration = """	struct pid_namespace *pid_ns = task_active_pid_ns(current);
+	char buffer[256];
+	int ret = 0;
 """
 
-hooked_signature = """void __user *, arg)
-{
+hook = """	struct pid_namespace *pid_ns = task_active_pid_ns(current);
+	char buffer[256];
+	int ret = 0;
+
 #ifdef CONFIG_KSU_MANUAL_HOOK
-        ksu_handle_sys_reboot(magic1, magic2, cmd, &arg);
+	ksu_handle_sys_reboot(magic1, magic2, cmd, &arg);
 #endif
 """
 
-if signature not in text:
+if declaration not in text:
     raise SystemExit(
-        "ERROR: reboot syscall function signature/opening brace not found"
+        "ERROR: expected reboot variable declarations not found"
     )
 
 text = text.replace(
-    signature,
-    hooked_signature,
+    declaration,
+    hook,
     1
 )
 
 path.write_text(text)
 PY
 
-            if grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
-                echo "kernel/reboot.c patched successfully"
-            else
-                echo "ERROR: failed to patch kernel/reboot.c"
-                exit 1
-            fi
+        if grep -q "ksu_handle_sys_reboot" kernel/reboot.c; then
+            echo "kernel/reboot.c patched successfully"
+        else
+            echo "ERROR: failed to patch kernel/reboot.c"
+            exit 1
         fi
     fi
+fi
 
 done
