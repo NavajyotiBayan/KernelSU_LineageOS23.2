@@ -259,6 +259,7 @@ arch/${ARCH}/configs/vendor/lineage_dubai.config"
   (
     cd "$KERNEL_DIR"
 
+    # shellcheck disable=SC2046
     make \
       CC="clang" \
       $(make_args) \
@@ -291,9 +292,10 @@ arch/${ARCH}/configs/vendor/lineage_dubai.config"
   (
     cd "$KERNEL_DIR"
 
+    # shellcheck disable=SC2046
     make \
-      O=out \
-      ARCH="${ARCH}" \
+      CC="clang" \
+      $(make_args) \
       olddefconfig
   )
 
