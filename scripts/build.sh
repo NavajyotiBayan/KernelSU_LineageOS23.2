@@ -336,7 +336,11 @@ arch/${ARCH}/configs/vendor/lineage_dubai.config"
 
 		else
 
-			warn "${required_config} is not enabled in final .config"
+			if [ "$required_config" = "CONFIG_KSU" ]; then
+    die "${required_config}=y is required but missing from final .config"
+else
+    warn "${required_config} is not enabled in final .config"
+fi
 
 		fi
 
